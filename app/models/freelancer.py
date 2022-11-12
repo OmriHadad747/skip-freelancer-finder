@@ -30,6 +30,7 @@ class Freelancer(BaseModel):
     current_status: FreelancerStatusEnum = FreelancerStatusEnum.AVAILABLE.value
     current_location: Optional[conlist(item_type=float, min_items=2, max_items=2)]
     current_location_date: Optional[datetime]
+    registration_token: str
 
 
 class FreelancerUpdate(BaseModel):
@@ -42,3 +43,4 @@ class FreelancerUpdate(BaseModel):
     current_status: Optional[FreelancerStatusEnum]
     current_location: Optional[conlist(item_type=float, min_items=2, max_items=2)]
     current_location_date: Optional[datetime]
+    registration_token: Optional[str]

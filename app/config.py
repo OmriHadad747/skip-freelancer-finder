@@ -1,6 +1,7 @@
 from os import environ
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 
@@ -14,6 +15,17 @@ class ProdConfig(BaseConfig):
     FLASK_ENV = "production"
     TESTING = False
     DEBUG = False
+
+    # MongoDB
+    MONGO_URI = environ.get("MONGO_URI_PROD")
+    FREELANCER_COLLECTION = environ.get("FREELANCER_COLLECTION_PROD")
+    JOB_COLLECTION = environ.get("JOB_COLLECTION_PROD")
+
+    # crud service
+    CRUD_HOST = "N/A"
+    
+    # FIREBASE
+    FIREBASE_SERVICE_ACCOUNT = environ.get("FIREBASE_SERVICE_ACCOUNT_PROD")
     
 
 class DevConfig(BaseConfig):
@@ -30,6 +42,9 @@ class DevConfig(BaseConfig):
 
     # crud service
     CRUD_HOST = "localhost:5000"
+
+    # FIREBASE
+    FIREBASE_SERVICE_ACCOUNT = environ.get("FIREBASE_SERVICE_ACCOUNT_DEV")
 
 
 class TestConfig(BaseConfig):
