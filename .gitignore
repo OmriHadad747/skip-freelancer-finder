@@ -1,0 +1,23 @@
+# __pycache__
+__pycache__/
+
+# pytest cache
+.pytest_cache
+
+# environment variables
+.env
+
+# test coverage
+.coverage
+
+# vscode
+.vscode
+
+# virtual environment
+venv
+
+# playground
+playground.py
+
+# service account file
+skip-push-notification_fsa.json
