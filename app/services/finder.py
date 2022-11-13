@@ -1,14 +1,15 @@
 import flask
+
 from typing import Any, Dict, List, Tuple
 from pydantic import validate_arguments
 from pymongo import command_cursor
 from flask import jsonify
 from firebase_admin import messaging
-from app.models import job as job_model
-from app.models import freelancer as freelancer_model
 from app import middlewares
-from app.services.db import FreelancerDatabase as freelancers_db
-from app.services.db import JobDatabase as job_db
+from skip_db_lib.models import job as job_model
+from skip_db_lib.models import freelancer as freelancer_model
+from skip_db_lib.database.freelancers import FreelancerDatabase as freelancers_db
+from skip_db_lib.database.jobs import JobDatabase as job_db
 
 
 class FreelancerFinder:

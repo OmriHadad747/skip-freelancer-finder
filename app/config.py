@@ -37,6 +37,7 @@ class DevConfig(BaseConfig):
 
     # MongoDB
     MONGO_URI = environ.get("MONGO_URI_DEV")
+    CUSTOMER_COLLECTION = environ.get("CUSTOMER_COLLECTION_DEV")
     FREELANCER_COLLECTION = environ.get("FREELANCER_COLLECTION_DEV")
     JOB_COLLECTION = environ.get("JOB_COLLECTION_DEV")
 
@@ -56,5 +57,6 @@ class TestConfig(BaseConfig):
 
     # MongoDB
     MONGO_URI = environ.get("MONGO_URI_TEST")
+    CUSTOMER_COLLECTION = environ.get("CUSTOMER_COLLECTION_TEST")
     FREELANCER_COLLECTION = environ.get("FREELANCERS_COLLECTION_TEST")
     JOB_COLLECTION = environ.get("JOB_COLLECTION_TEST")

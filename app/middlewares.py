@@ -1,8 +1,8 @@
 from functools import wraps
 from typing import Any, Dict
-from app.models import job as job_model
 from app.utils.errors import Errors as err
-from app.services.db import JobDatabase as db
+from skip_db_lib.models import job as job_model
+from skip_db_lib.database.jobs import JobDatabase as db
 
 
 # TODO type the 'find_func' argument
