@@ -23,10 +23,10 @@ class ProdConfig(BaseConfig):
 
     # crud service
     CRUD_HOST = "N/A"
-    
+
     # FIREBASE
     FIREBASE_SERVICE_ACCOUNT = environ.get("FIREBASE_SERVICE_ACCOUNT_PROD")
-    
+
 
 class DevConfig(BaseConfig):
     # General flask's configuration
