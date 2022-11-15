@@ -52,7 +52,7 @@ class FreelancerFinder:
     # TODO type the return of this function
     def find(cls, incoming_job: job_model.Job) -> Tuple[flask.Response, int]:
         """
-        Find available and nearest freelancers to the job location 
+        Find available and nearest freelancers to the job location
         (which is actually the customer location) using skip-db-lib.
 
         Args:
@@ -77,7 +77,7 @@ class FreelancerFinder:
     @middlewares.update_incoming_job
     def take(cls, job_id: str = None) -> Tuple[flask.Response, int]:
         """
-        In case the given 'job_id' equals None, you can assume that the job already 
+        In case the given 'job_id' equals None, you can assume that the job already
         taken by another freelancer.
 
         Otherwise, fetch the job and corresponded customer from the database
