@@ -5,6 +5,7 @@ from pydantic import validate_arguments
 from pymongo import command_cursor
 from flask import jsonify
 from firebase_admin import messaging
+from app.utils.errors import Errors as err
 from skip_db_lib.models import job as job_model
 from skip_db_lib.models import customer as customer_model
 from skip_db_lib.database.freelancers import FreelancerDatabase as freelancers_db
@@ -18,7 +19,7 @@ class FreelancerFinder:
     def _exclude_failed_tokens(tokens: List[str], resps: List[messaging.SendResponse]) -> None:
         # TODO write docstring
         failed_tokens = [tokens[idx] for idx, resp in enumerate(resps) if not resp.sucess]
-        # TODO log here DEBUG - discarding invalid registration tokens {failed_tokens}
+        print(f"DEBUG - discarding invalid registration tokens {failed_tokens}")
 
         # TODO implement the call to the db function that remove the registration token from freelancers
 
@@ -27,7 +28,7 @@ class FreelancerFinder:
         cls, job: job_model.Job, freelancers: command_cursor.CommandCursor
     ) -> None:
         # TODO write docstring
-        # TODO log here INFO - notifying freelancers about incoming job
+        print("INFO - notifying freelancers about incoming job")
         tokens = [f.get("registration_token") for f in freelancers]
 
         msg = messaging.MulticastMessage(data=job.dict(), tokens=tokens)
@@ -35,21 +36,21 @@ class FreelancerFinder:
         if resp.failure_count > 0:
             cls._exclude_failed_tokens(tokens, resp.responses)
 
-        # TODO log here DEBUG - f"{resp.success_count} notified successfully | {resp.failure_count} not notified"
+        print(f"DEBUG - {resp.success_count} notified successfully | {resp.failure_count} not notified")
 
     @classmethod
     def _notify_customer(cls, job: job_model.Job, customer: customer_model.Customer) -> None:
         # TODO write docstring
-        # TODO log here INFO - notifying customer that a freelancer was found
+        print("INFO - notifying customer that a freelancer was found")
         msg = messaging.Message(data=job.dict(), token=customer.registration_token)
         resp = messaging.send(msg, dry_run=True)
         # TODO validate that message was sent somehow
-        # TODO log here DEBUG - f"customer notified successfully"
+
+        print("DEBUG - customer notified successfully")
 
     @classmethod
     @validate_arguments
     @middlewares.save_incoming_job
-    # TODO type the return of this function
     def find(cls, incoming_job: job_model.Job) -> Tuple[flask.Response, int]:
         """
         Find available and nearest freelancers to the job location
@@ -62,13 +63,13 @@ class FreelancerFinder:
             Tuple[flask.Response, int]
         """
         try:
-            # TODO log here DEBUG - f"searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}"
+            print(f"DEBUG - searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}")
+
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
             cls._nofity_freelancers(incoming_job, available_freelancers)
 
         except Exception as e:
-            # TODO handle exception here
-            pass
+            return err.general_exception(e)
 
         return jsonify(message="notification pushed to freelancers successfully"), 200
 
@@ -95,12 +96,12 @@ class FreelancerFinder:
 
         try:
             job = job_model.Job(**jobs_db.get_job_by_id(job_id))
-            # TODO log here DEBUG - f"searching the customer that posted job {job_id}"
+
+            print(f"DEBUG - searching the customer that posted job {job_id}")
             customer = customers_db.get_customer_by_email(job.customer_email)
             cls._notify_customer(job, customer)
 
         except Exception as e:
-            # TODO handle exception here
-            pass
+            return err.general_exception(e)
 
         return jsonify(message=f"freelancer found for {job_id}"), 200

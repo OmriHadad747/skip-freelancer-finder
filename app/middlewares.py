@@ -18,7 +18,7 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
 
     @wraps(find_func)
     def save_incoming_job_wrapper(incoming_job_fields: Dict[str, Any]):
-        # TODO log here DEBUG - f"saving to database the following job {incoming_job_fields}"
+        print(f"DEBUG - saving to database the following job {incoming_job_fields}")
         try:
             incoming_job = job_model.Job(**incoming_job_fields)
             # TODO delete the following 2 lines once the location is enabled
@@ -30,7 +30,7 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
             if not res.acknowledged:
                 return err.db_op_not_acknowledged(incoming_job.dict(), op="insert")
 
-            # TODO log here DEBUG - f"job {res.inserted_id} saved to database successfully"
+            print(f"DEBUG - job {res.inserted_id} saved to database successfully")
 
         except pyd.ValidationError as e:
             return err.validation_error(e, incoming_job_fields)
@@ -52,7 +52,7 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
 
     @wraps(take_func)
     def update_incoming_job_wrapper(job_id: str, freelancer_fields: Dict[str, Any]):
-        # TODO log here DEBUG - f"updating job {job_id} in database with freelancer data"
+        print(f"DEBUG - updating job {job_id} in database with freelancer data")
         try:
             freelancer = freelancer_model.Freelancer(**freelancer_fields)
             job = job_model.JobUpdate(
@@ -65,13 +65,13 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
 
             res = db.update_job(job_id, job)
             if res.matched_count == 0 and res.modified_count == 0:
-                # TODO log here DEBUG - f"job {job_id} was already taken by another freelancer"
+                print(f"DEBUG - job {job_id} was already taken by another freelancer")
                 return take_func()
 
             if not res.acknowledged:
                 return err.db_op_not_acknowledged(job.dict(exclude_none=True), op="update")
 
-            # TODO log here DEBUG - f"job {job_id} updated in database successfully"
+            print(f"DEBUG - job {job_id} updated in database successfully")
 
         except pyd.ValidationError as e:
             return err.validation_error(e, freelancer_fields)
