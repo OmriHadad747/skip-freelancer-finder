@@ -17,7 +17,10 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
     """
 
     @wraps(find_func)
-    def save_incoming_job_wrapper(incoming_job_fields: Dict[str, Any]):
+    def save_incoming_job_wrapper(*args):
+        _cls = args[0]
+        incoming_job_fields: Dict[str, Any] = args[1]
+
         print(f"DEBUG - saving to database the following job {incoming_job_fields}")
         try:
             incoming_job = job_model.Job(**incoming_job_fields)
@@ -37,7 +40,7 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
         except Exception as e:
             return err.general_exception(e)
 
-        return find_func(incoming_job)
+        return find_func(_cls, incoming_job)
 
     return save_incoming_job_wrapper
 
@@ -51,7 +54,11 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
     """
 
     @wraps(take_func)
-    def update_incoming_job_wrapper(job_id: str, freelancer_fields: Dict[str, Any]):
+    def update_incoming_job_wrapper(*args):
+        _cls = args[0]
+        job_id: str = args[1]
+        freelancer_fields: Dict[str, Any] = args[2]
+
         print(f"DEBUG - updating job {job_id} in database with freelancer data")
         try:
             freelancer = freelancer_model.Freelancer(**freelancer_fields)
@@ -78,6 +85,6 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
         except Exception as e:
             return err.general_exception(e)
 
-        return take_func(job_id)
+        return take_func(_cls, job_id)
 
     return update_incoming_job_wrapper

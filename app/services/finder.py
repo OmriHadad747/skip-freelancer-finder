@@ -1,11 +1,12 @@
+import json
 import flask
 
 from typing import List, Tuple
-from pydantic import validate_arguments
 from pymongo import command_cursor
 from flask import jsonify
 from firebase_admin import messaging
 from app.utils.errors import Errors as err
+from app.utils import custom_json_encoder as json_enc
 from skip_db_lib.models import job as job_model
 from skip_db_lib.models import customer as customer_model
 from skip_db_lib.database.freelancers import FreelancerDatabase as freelancers_db
@@ -31,12 +32,19 @@ class FreelancerFinder:
         print("INFO - notifying freelancers about incoming job")
         tokens = [f.get("registration_token") for f in freelancers]
 
-        msg = messaging.MulticastMessage(data=job.dict(), tokens=tokens)
+        d = job.dict(exclude_none=True, )
+
+        msg = messaging.MulticastMessage(
+            data=d, tokens=tokens
+        )
+            # data=json.dumps(job.dict(), default=json_enc.custom_serializer), tokens=tokens
         resp: messaging.BatchResponse = messaging.send_multicast(msg, dry_run=True)
         if resp.failure_count > 0:
             cls._exclude_failed_tokens(tokens, resp.responses)
 
-        print(f"DEBUG - {resp.success_count} notified successfully | {resp.failure_count} not notified")
+        print(
+            f"DEBUG - {resp.success_count} notified successfully | {resp.failure_count} not notified"
+        )
 
     @classmethod
     def _notify_customer(cls, job: job_model.Job, customer: customer_model.Customer) -> None:
@@ -49,7 +57,6 @@ class FreelancerFinder:
         print("DEBUG - customer notified successfully")
 
     @classmethod
-    @validate_arguments
     @middlewares.save_incoming_job
     def find(cls, incoming_job: job_model.Job) -> Tuple[flask.Response, int]:
         """
@@ -63,7 +70,9 @@ class FreelancerFinder:
             Tuple[flask.Response, int]
         """
         try:
-            print(f"DEBUG - searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}")
+            print(
+                f"DEBUG - searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}"
+            )
 
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
             cls._nofity_freelancers(incoming_job, available_freelancers)
@@ -73,9 +82,8 @@ class FreelancerFinder:
 
         return jsonify(message="notification pushed to freelancers successfully"), 200
 
-    @classmethod
-    @validate_arguments
     @middlewares.update_incoming_job
+    @classmethod
     def take(cls, job_id: str = None) -> Tuple[flask.Response, int]:
         """
         In case the given 'job_id' equals None, you can assume that the job already
