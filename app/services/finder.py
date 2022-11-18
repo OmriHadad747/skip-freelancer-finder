@@ -47,7 +47,9 @@ class FreelancerFinder:
         # TODO write docstring
         app.logger.info("notifying customer that a freelancer was found")
 
-        msg = messaging.Message(data=job.job_to_str(freelancer_part=True), token=customer.registration_token)
+        msg = messaging.Message(
+            data=job.job_to_str(freelancer_part=True), token=customer.registration_token
+        )
         # resp = messaging.send(msg, dry_run=True)
         # TODO validate that message was sent somehow
 
