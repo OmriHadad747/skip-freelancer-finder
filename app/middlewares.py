@@ -1,6 +1,7 @@
 import pydantic as pyd
 from functools import wraps
 from typing import Any, Callable, Dict, Optional
+from flask import current_app as app
 from app.utils.errors import Errors as err
 from skip_db_lib.models import job as job_model
 from skip_db_lib.models import freelancer as freelancer_model
@@ -21,19 +22,20 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
         _cls = args[0]
         incoming_job_fields: Dict[str, Any] = args[1]
 
-        print(f"DEBUG - saving to database the following job {incoming_job_fields}")
         try:
             incoming_job = job_model.Job(**incoming_job_fields)
             # TODO delete the following 2 lines once the location is enabled
             # by the customer application
             incoming_job.customer_lon = -73.9667
             incoming_job.customer_lat = 40.78
+            
+            app.logger.debug(f"saving to database the following job {incoming_job.dict()}")
 
             res = db.add_job(incoming_job)
             if not res.acknowledged:
                 return err.db_op_not_acknowledged(incoming_job.dict(), op="insert")
 
-            print(f"DEBUG - job {res.inserted_id} saved to database successfully")
+            app.logger.debug(f"job {res.inserted_id} saved to database")
 
         except pyd.ValidationError as e:
             return err.validation_error(e, incoming_job_fields)

@@ -1,25 +1,24 @@
-import json
 import flask
 
 from typing import List, Tuple
 from pymongo import command_cursor
 from flask import jsonify
+from flask import current_app as app
 from firebase_admin import messaging
+from app import middlewares
 from app.utils.errors import Errors as err
-from app.utils import custom_json_encoder as json_enc
 from skip_db_lib.models import job as job_model
 from skip_db_lib.models import customer as customer_model
 from skip_db_lib.database.freelancers import FreelancerDatabase as freelancers_db
 from skip_db_lib.database.jobs import JobDatabase as jobs_db
 from skip_db_lib.database.customers import CustomerDatabase as customers_db
-from app import middlewares
 
 
 class FreelancerFinder:
     @staticmethod
     def _exclude_failed_tokens(tokens: List[str], resps: List[messaging.SendResponse]) -> None:
         # TODO write docstring
-        failed_tokens = [tokens[idx] for idx, resp in enumerate(resps) if not resp.sucess]
+        failed_tokens = [tokens[idx] for idx, resp in enumerate(resps) if not resp.success]
         print(f"DEBUG - discarding invalid registration tokens {failed_tokens}")
 
         # TODO implement the call to the db function that remove the registration token from freelancers
@@ -29,22 +28,16 @@ class FreelancerFinder:
         cls, job: job_model.Job, freelancers: command_cursor.CommandCursor
     ) -> None:
         # TODO write docstring
-        print("INFO - notifying freelancers about incoming job")
+        app.logger.info("notifying freelancers about incoming job")
+
         tokens = [f.get("registration_token") for f in freelancers]
 
-        d = job.dict(exclude_none=True, )
-
-        msg = messaging.MulticastMessage(
-            data=d, tokens=tokens
-        )
-            # data=json.dumps(job.dict(), default=json_enc.custom_serializer), tokens=tokens
+        msg = messaging.MulticastMessage(data=job.job_to_str(), tokens=tokens)
         resp: messaging.BatchResponse = messaging.send_multicast(msg, dry_run=True)
         if resp.failure_count > 0:
-            cls._exclude_failed_tokens(tokens, resp.responses)
+            cls._exclude_failed_tokens(tokens, resp.responses) 
 
-        print(
-            f"DEBUG - {resp.success_count} notified successfully | {resp.failure_count} not notified"
-        )
+        app.logger.debug(f"{resp.success_count} notified | {resp.failure_count} not notified")
 
     @classmethod
     def _notify_customer(cls, job: job_model.Job, customer: customer_model.Customer) -> None:
@@ -70,9 +63,7 @@ class FreelancerFinder:
             Tuple[flask.Response, int]
         """
         try:
-            print(
-                f"DEBUG - searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}"
-            )
+            app.logger.debug(f"searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}")
 
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
             cls._nofity_freelancers(incoming_job, available_freelancers)
