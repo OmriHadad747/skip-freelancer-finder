@@ -19,7 +19,8 @@ class FreelancerFinder:
     def _exclude_failed_tokens(tokens: List[str], resps: List[messaging.SendResponse]) -> None:
         # TODO write docstring
         failed_tokens = [tokens[idx] for idx, resp in enumerate(resps) if not resp.success]
-        print(f"DEBUG - discarding invalid registration tokens {failed_tokens}")
+
+        app.logger.debug(f"discarding invalid registration tokens {failed_tokens}")
 
         # TODO implement the call to the db function that remove the registration token from freelancers
 
@@ -35,19 +36,20 @@ class FreelancerFinder:
         msg = messaging.MulticastMessage(data=job.job_to_str(), tokens=tokens)
         resp: messaging.BatchResponse = messaging.send_multicast(msg, dry_run=True)
         if resp.failure_count > 0:
-            cls._exclude_failed_tokens(tokens, resp.responses) 
+            cls._exclude_failed_tokens(tokens, resp.responses)
 
         app.logger.debug(f"{resp.success_count} notified | {resp.failure_count} not notified")
 
     @classmethod
     def _notify_customer(cls, job: job_model.Job, customer: customer_model.Customer) -> None:
         # TODO write docstring
-        print("INFO - notifying customer that a freelancer was found")
-        msg = messaging.Message(data=job.dict(), token=customer.registration_token)
-        resp = messaging.send(msg, dry_run=True)
+        app.logger.info("notifying customer that a freelancer was found")
+
+        msg = messaging.Message(data=job.job_to_str(freelancer_part=True), token=customer.registration_token)
+        # resp = messaging.send(msg, dry_run=True)
         # TODO validate that message was sent somehow
 
-        print("DEBUG - customer notified successfully")
+        app.logger.info("customer notified")
 
     @classmethod
     @middlewares.save_incoming_job
@@ -63,7 +65,9 @@ class FreelancerFinder:
             Tuple[flask.Response, int]
         """
         try:
-            app.logger.debug(f"searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}")
+            app.logger.debug(
+                f"searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}"
+            )
 
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
             cls._nofity_freelancers(incoming_job, available_freelancers)
@@ -71,10 +75,10 @@ class FreelancerFinder:
         except Exception as e:
             return err.general_exception(e)
 
-        return jsonify(message="notification pushed to freelancers successfully"), 200
+        return jsonify(message="notification pushed to freelancers"), 200
 
-    @middlewares.update_incoming_job
     @classmethod
+    @middlewares.update_incoming_job
     def take(cls, job_id: str = None) -> Tuple[flask.Response, int]:
         """
         In case the given 'job_id' equals None, you can assume that the job already
@@ -96,8 +100,11 @@ class FreelancerFinder:
         try:
             job = job_model.Job(**jobs_db.get_job_by_id(job_id))
 
-            print(f"DEBUG - searching the customer that posted job {job_id}")
-            customer = customers_db.get_customer_by_email(job.customer_email)
+            app.logger.debug(f"searching the customer that posted job {job_id}")
+
+            customer = customer_model.Customer(
+                **customers_db.get_customer_by_email(job.customer_email)
+            )
             cls._notify_customer(job, customer)
 
         except Exception as e:

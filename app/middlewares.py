@@ -28,7 +28,7 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
             # by the customer application
             incoming_job.customer_lon = -73.9667
             incoming_job.customer_lat = 40.78
-            
+
             app.logger.debug(f"saving to database the following job {incoming_job.dict()}")
 
             res = db.add_job(incoming_job)
@@ -61,26 +61,27 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
         job_id: str = args[1]
         freelancer_fields: Dict[str, Any] = args[2]
 
-        print(f"DEBUG - updating job {job_id} in database with freelancer data")
         try:
-            freelancer = freelancer_model.Freelancer(**freelancer_fields)
+            freelancer = freelancer_model.FreelancerTakeJob(**freelancer_fields)
             job = job_model.JobUpdate(
                 **{
-                    "freelancer_email": freelancer.email,
-                    "freelancer_phone": freelancer.phone,
+                    "freelancer_email": freelancer.freelancer_email,
+                    "freelancer_phone": freelancer.freelancer_phone,
                     "job_status": job_model.JobStatusEnum.FREELANCER_FOUND,
                 }
             )
 
+            app.logger.debug(f"updating job {job_id} in database with freelancer data")
+
             res = db.update_job(job_id, job)
             if res.matched_count == 0 and res.modified_count == 0:
-                print(f"DEBUG - job {job_id} was already taken by another freelancer")
-                return take_func()
+                app.logger.debug(f"job {job_id} was already taken by another freelancer")
+                return take_func(_cls)
 
             if not res.acknowledged:
                 return err.db_op_not_acknowledged(job.dict(exclude_none=True), op="update")
 
-            print(f"DEBUG - job {job_id} updated in database successfully")
+            app.logger.debug(f"job {res.upserted_id} updated in database")
 
         except pyd.ValidationError as e:
             return err.validation_error(e, freelancer_fields)
