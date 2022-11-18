@@ -98,13 +98,14 @@ class FreelancerFinder:
             return jsonify(message="job was already taken by another freelancer"), 400
 
         try:
+            # get the job
             job = job_model.Job(**jobs_db.get_job_by_id(job_id))
 
-            app.logger.debug(f"searching the customer that posted job {job_id}")
-
+            # get the customer posted the job
             customer = customer_model.Customer(
                 **customers_db.get_customer_by_email(job.customer_email)
             )
+
             cls._notify_customer(job, customer)
 
         except Exception as e:
