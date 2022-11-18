@@ -77,7 +77,7 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
             if not res.acknowledged:
                 return err.db_op_not_acknowledged(job.dict(exclude_none=True), op="update")
 
-            app.logger.debug(f"job {res.upserted_id} updated in database")
+            app.logger.debug(f"job {job_id} updated in database")
 
         except pyd.ValidationError as e:
             return err.validation_error(e, freelancer_fields)
