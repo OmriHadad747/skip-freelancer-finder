@@ -24,10 +24,6 @@ def save_incoming_job(find_func: Callable[[Any], Optional[Dict[str, Any]]]):
 
         try:
             incoming_job = job_model.Job(**incoming_job_fields)
-            # TODO delete the following 2 lines once the location is enabled
-            # by the customer application
-            incoming_job.customer_lon = -73.9667
-            incoming_job.customer_lat = 40.78
 
             app.logger.debug(f"saving to database the following job {incoming_job.dict()}")
 

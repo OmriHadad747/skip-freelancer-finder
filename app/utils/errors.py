@@ -5,7 +5,7 @@ from flask import jsonify
 class Errors:
     @classmethod
     def validation_error(
-        cls, exc: Exception, to_validate: Dict[str, Any]
+        cls, exc: Exception, to_validate: Dict[str, Any]="N/A"
     ) -> Tuple[Dict[str, Any], int]:
         return jsonify(to_validate=to_validate, error_msg=str(exc)), 400
 

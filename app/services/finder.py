@@ -1,4 +1,5 @@
 import flask
+import pydantic as pyd
 
 from typing import List, Tuple
 from pymongo import command_cursor
@@ -41,6 +42,7 @@ class FreelancerFinder:
         app.logger.debug(f"{resp.success_count} notified | {resp.failure_count} not notified")
 
     @classmethod
+    @pyd.validate_arguments
     def _notify_customer(cls, job: job_model.Job, customer: customer_model.Customer) -> None:
         # TODO write docstring
         app.logger.info("notifying customer that a freelancer was found")
@@ -66,7 +68,7 @@ class FreelancerFinder:
         """
         try:
             app.logger.debug(
-                f"searching neareast freelancers to customer location | lon: {incoming_job.customer_lon} | lat: {incoming_job.customer_lat}"
+                f"searching neareast freelancers to customer location | lon: {incoming_job.job_location[0]} | lat: {incoming_job.job_location[1]}"
             )
 
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
@@ -108,6 +110,8 @@ class FreelancerFinder:
 
             cls._notify_customer(job, customer)
 
+        except pyd.ValidationError as e:
+            return err.validation_error(e)
         except Exception as e:
             return err.general_exception(e)
 
