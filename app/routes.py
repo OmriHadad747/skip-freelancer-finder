@@ -15,5 +15,5 @@ def find_freelancer() -> Tuple[flask.Response, int]:
 
 
 @freelancer_finder_bp.post("/take_job/<string:id>")
-def take_job(id: str):
+def take_job(id: str) -> Tuple[flask.Response, int]:
     return FreelancerFinder.take(id, request.json)

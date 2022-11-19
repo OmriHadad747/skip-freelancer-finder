@@ -69,7 +69,9 @@ def update_incoming_job(take_func: Callable[[Any], Optional[Dict[str, Any]]]):
 
             app.logger.debug(f"updating job {job_id} in database with freelancer data")
 
-            res = db.update_job(job_id, job)
+            res = db.update_job(
+                job_id, job, curr_job_status=job_model.JobStatusEnum.FREELANCER_FINDING
+            )
             if res.matched_count == 0 and res.modified_count == 0:
                 app.logger.debug(f"job {job_id} was already taken by another freelancer")
                 return take_func(_cls)

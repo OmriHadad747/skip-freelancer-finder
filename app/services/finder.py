@@ -17,7 +17,7 @@ from skip_db_lib.database.customers import CustomerDatabase as customers_db
 
 class FreelancerFinder:
     @staticmethod
-    def _exclude_failed_tokens(tokens: List[str], resps: List[messaging.SendResponse]) -> None:
+    def _exclude_failed_tokens(tokens: List[str], resps: List[messaging.SendResponse]) -> List[str]:
         # TODO write docstring
         failed_tokens = [tokens[idx] for idx, resp in enumerate(resps) if not resp.success]
 
@@ -25,10 +25,12 @@ class FreelancerFinder:
 
         # TODO implement the call to the db function that remove the registration token from freelancers
 
+        return [tokens.remove(t) for t in failed_tokens if t in tokens]
+
     @classmethod
     def _nofity_freelancers(
         cls, job: job_model.Job, freelancers: command_cursor.CommandCursor
-    ) -> None:
+    ) -> List[str]:
         # TODO write docstring
         app.logger.info("notifying freelancers about incoming job")
 
@@ -37,9 +39,10 @@ class FreelancerFinder:
         msg = messaging.MulticastMessage(data=job.job_to_str(), tokens=tokens)
         resp: messaging.BatchResponse = messaging.send_multicast(msg, dry_run=True)
         if resp.failure_count > 0:
-            cls._exclude_failed_tokens(tokens, resp.responses)
+            return cls._exclude_failed_tokens(tokens, resp.responses)
 
         app.logger.debug(f"{resp.success_count} notified | {resp.failure_count} not notified")
+        return tokens
 
     @classmethod
     @pyd.validate_arguments
@@ -50,10 +53,9 @@ class FreelancerFinder:
         msg = messaging.Message(
             data=job.job_to_str(freelancer_part=True), token=customer.registration_token
         )
-        # resp = messaging.send(msg, dry_run=True)
-        # TODO validate that message was sent somehow
+        resp = messaging.send(msg, dry_run=True)
 
-        app.logger.info("customer notified")
+        app.logger.debug(f"customer notified with message {resp}")
 
     @classmethod
     @middlewares.save_incoming_job
@@ -63,7 +65,7 @@ class FreelancerFinder:
         (which is actually the customer location) using skip-db-lib.
 
         Args:
-            incoming_job (job_model.Job): _description_
+            incoming_job (job_model.Job)
 
         Returns:
             Tuple[flask.Response, int]
@@ -74,12 +76,12 @@ class FreelancerFinder:
             )
 
             available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
-            cls._nofity_freelancers(incoming_job, available_freelancers)
+            notified_tokens = cls._nofity_freelancers(incoming_job, available_freelancers)
 
         except Exception as e:
             return err.general_exception(e)
 
-        return jsonify(message="notification pushed to freelancers"), 200
+        return jsonify(message=f"notification pushed to freelancers {notified_tokens}"), 200
 
     @classmethod
     @middlewares.update_incoming_job
@@ -117,4 +119,4 @@ class FreelancerFinder:
         except Exception as e:
             return err.general_exception(e)
 
-        return jsonify(message=f"freelancer found for {job_id}"), 200
+        return jsonify(message=f"notification pushed to customer {customer.email}"), 200
