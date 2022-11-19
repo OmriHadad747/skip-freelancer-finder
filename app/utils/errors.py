@@ -15,7 +15,10 @@ class Errors:
 
     @classmethod
     def db_op_not_acknowledged(cls, obj: Dict[str, Any], op: str) -> Tuple[Dict[str, Any], int]:
-        return jsonify(err_msg=f"db operation {op.upper()} on {obj} doesn't acknowledged"), 400
+        return (
+            jsonify(err_msg=f"db operation {op.upper()} on {obj} doesn't acknowledged"),
+            400,
+        )
 
     @classmethod
     def login_failed(cls):

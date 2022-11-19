@@ -81,7 +81,10 @@ class FreelancerFinder:
         except Exception as e:
             return err.general_exception(e)
 
-        return jsonify(message=f"notification pushed to freelancers {notified_tokens}"), 200
+        return (
+            jsonify(message=f"notification pushed to freelancers {notified_tokens}"),
+            200,
+        )
 
     @classmethod
     @middlewares.update_incoming_job
