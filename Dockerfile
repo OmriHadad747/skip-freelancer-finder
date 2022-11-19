@@ -23,10 +23,10 @@ RUN pip3 install --upgrade pip
 WORKDIR ${APP_DIR}
 
 
-ADD app ./app
-ADD resources ./resources
-ADD requirements ./
-ADD run.py ./
+ADD skip-freelancer-finder/app ./app
+ADD skip-freelancer-finder/resources ./resources
+ADD skip-freelancer-finder/requirements ./
+ADD skip-freelancer-finder/run.py ./
 
 
 RUN  pip3 install -r requirements --no-cache-dir
