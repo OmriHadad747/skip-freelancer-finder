@@ -28,6 +28,26 @@ class ProdConfig(BaseConfig):
     FIREBASE_SERVICE_ACCOUNT = environ.get("FIREBASE_SERVICE_ACCOUNT_PROD")
 
 
+class LocalDockerizingConfig(BaseConfig):
+    # General flask's configuration
+    ENV = "development"
+    FLASK_ENV = "development"
+    DEBUG = True
+    TESTING = False
+
+    # MongoDB
+    MONGO_URI = environ.get("MONGO_URI_DEV_DOCKER")
+    CUSTOMER_COLLECTION = environ.get("CUSTOMER_COLLECTION_DEV_DOCKER")
+    FREELANCER_COLLECTION = environ.get("FREELANCER_COLLECTION_DEV_DOCKER")
+    JOB_COLLECTION = environ.get("JOB_COLLECTION_DEV_DOCKER")
+
+    # crud service
+    CRUD_HOST = "skip-crud-container:5000"
+
+    # FIREBASE
+    FIREBASE_SERVICE_ACCOUNT = environ.get("FIREBASE_SERVICE_ACCOUNT_DEV")
+
+
 class DevConfig(BaseConfig):
     # General flask's configuration
     ENV = "development"
