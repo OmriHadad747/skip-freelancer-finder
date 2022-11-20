@@ -33,7 +33,7 @@ class FreelancerFinder:
 
         # TODO implement the call to the db function that remove the registration token from freelancers
         # implement here during testing with real registration tokens
-        
+
         return [t for t in failed_tokens if t not in tokens]
 
     @classmethod
@@ -41,7 +41,7 @@ class FreelancerFinder:
         cls, job: job_model.Job, freelancers: command_cursor.CommandCursor
     ) -> List[str]:
         """Found the registration token for each freelancer, and eventually
-        trying to push notification for all of them. 
+        trying to push notification for all of them.
 
         If there are failures with some registation tokens, deleting them frm
         database.
@@ -63,7 +63,9 @@ class FreelancerFinder:
         # if resp.failure_count > 0:
         #     return cls._exclude_failed_tokens(tokens, resp.responses)
 
-        app.logger.debug(f"from {tokens} | {resp.success_count} notified | {resp.failure_count} not notified")
+        app.logger.debug(
+            f"from {tokens} | {resp.success_count} notified | {resp.failure_count} not notified"
+        )
         return tokens
 
     @classmethod
