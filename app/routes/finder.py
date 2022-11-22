@@ -1,8 +1,7 @@
 import flask
 
 from typing import Tuple
-from flask import Blueprint
-from flask import request
+from flask import Blueprint, request
 
 from app.services.finder import FreelancerFinder
 
