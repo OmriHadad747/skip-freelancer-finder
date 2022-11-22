@@ -12,7 +12,6 @@ def create_app(app_config: BaseConfig) -> Flask:
 
         import firebase_admin
         from skip_common_lib.extensions import jwt, firebase_admin_creds
-        # from app.extensions import firebase_admin, firebase_admin_creds
         firebase_admin.initialize_app(firebase_admin_creds)
         jwt.init_app(app)
 
