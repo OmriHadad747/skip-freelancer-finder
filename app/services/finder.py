@@ -6,13 +6,14 @@ from pymongo import command_cursor
 from flask import jsonify
 from flask import current_app as app
 from firebase_admin import messaging
-from app import middlewares
-from app.utils.errors import Errors as err
-from skip_db_lib.models import job as job_model
-from skip_db_lib.models import customer as customer_model
-from skip_db_lib.database.freelancers import FreelancerDatabase as freelancers_db
-from skip_db_lib.database.jobs import JobDatabase as jobs_db
-from skip_db_lib.database.customers import CustomerDatabase as customers_db
+
+from skip_common_lib.middleware import freelancer_finder as middlwares
+from skip_common_lib.utils.errors import Errors as err
+from skip_common_lib.models import job as job_model
+from skip_common_lib.models import customer as customer_model
+from skip_common_lib.database.jobs import JobDatabase as jobs_db
+from skip_common_lib.database.customers import CustomerDatabase as customers_db
+from skip_common_lib.database.freelancers import FreelancerDatabase as freelancers_db
 
 
 class FreelancerFinder:
@@ -87,7 +88,7 @@ class FreelancerFinder:
         app.logger.debug(f"customer notified with message {resp}")
 
     @classmethod
-    @middlewares.save_incoming_job
+    @middlwares.save_incoming_job
     def find(cls, incoming_job: job_model.Job) -> Tuple[flask.Response, int]:
         """Find available and nearest freelancers to the job location
         (which is actually the customer location) using skip-db-lib.
@@ -115,7 +116,7 @@ class FreelancerFinder:
         )
 
     @classmethod
-    @middlewares.update_incoming_job
+    @middlwares.update_incoming_job
     def take(cls, job_id: str = None) -> Tuple[flask.Response, int]:
         """In case the given 'job_id' equals None, you can assume that the job already
         taken by another freelancer.
