@@ -15,7 +15,7 @@ def create_app(app_config: BaseConfig) -> Flask:
         firebase_admin.initialize_app(firebase_admin_creds)
         jwt.init_app(app)
 
-        from app import routes
-        app.register_blueprint(routes.freelancer_finder_bp)
+        from app.routes import finder
+        app.register_blueprint(finder.freelancer_finder_bp)
 
         return app
