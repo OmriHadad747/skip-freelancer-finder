@@ -1,7 +1,7 @@
 FROM tiangolo/uwsgi-nginx:python3.10
 
 
-ENV APP_DIR /skip-crud-service
+ENV APP_DIR /skip-freelancer-finder
 
 
 # update and install packages
