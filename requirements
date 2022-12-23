@@ -1,2 +1,2 @@
 requests==2.28.1
--e git+https://github.com/OmriHadad747/skip-common-lib.git@dev#egg=skip-common-lib
+-e git+https://github.com/OmriHadad747/skip-common-lib.git@move-to-fast-api#egg=skip-common-lib

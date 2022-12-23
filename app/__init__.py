@@ -1,21 +1,25 @@
-from skip_common_lib.config import BaseConfig
-from flask import Flask
+import pydantic as pyd
+
+from fastapi import FastAPI
+from logging.config import dictConfig
 
 
-def create_app(app_config: BaseConfig) -> Flask:
-    app = Flask(__name__, instance_relative_config=True)
-    app.config.from_object(app_config)
+def create_app(settings: pyd.BaseSettings) -> FastAPI:
+    app = FastAPI()
 
-    with app.app_context():
-        from skip_common_lib.database import mongo
-        mongo.init_app(app)
+    # init settings
+    from skip_common_lib.settings import app_settings
+    app_settings.init(settings)
 
-        import firebase_admin
-        from skip_common_lib.extensions import jwt, firebase_admin_creds
-        firebase_admin.initialize_app(firebase_admin_creds)
-        jwt.init_app(app)
+    # init logging configuration
+    from skip_common_lib.logging import LogConfig
+    dictConfig(LogConfig(LOGGER_NAME="skip-freelancerfinder-service").dict())
 
-        from app.routes import finder
-        app.register_blueprint(finder.freelancer_finder_bp)
+    # init clients
+    from app import clients
 
-        return app
+    # init routes
+    from app.routes import finder
+    app.include_router(finder.api)
+
+    return app
