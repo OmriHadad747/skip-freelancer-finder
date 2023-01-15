@@ -8,18 +8,19 @@ def create_app(settings: pyd.BaseSettings) -> FastAPI:
     app = FastAPI()
 
     # init settings
-    from skip_common_lib.settings import app_settings
+    from app.settings import app_settings
+
     app_settings.init(settings)
 
-    # init logging configuration
+    # init logging
     from skip_common_lib.logging import LogConfig
-    dictConfig(LogConfig(LOGGER_NAME="skip-freelancerfinder-service").dict())
 
-    # init clients
-    from app import clients
+    dictConfig(LogConfig(LOGGER_NAME="skip-freelancer-finder-service").dict())
 
     # init routes
-    from app.routes import finder
+    from app.routes import finder, quotation
+
     app.include_router(finder.api)
+    app.include_router(quotation.api)
 
     return app

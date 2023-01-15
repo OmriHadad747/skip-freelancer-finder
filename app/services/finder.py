@@ -2,30 +2,26 @@ import logging
 import pydantic as pyd
 
 from skip_common_lib.middleware import freelancer_finder as middlwares
-from skip_common_lib.schemas import job as job_model
-from skip_common_lib.schemas import customer as customer_model
-from skip_common_lib.schemas import response as resp_schema
-from skip_common_lib.database.jobs import JobDB as jobs_db
-from skip_common_lib.database.customers import CustomerDB as customers_db
-from skip_common_lib.database.freelancers import FreelancerDB as freelancers_db
+from app.schemas.job import Job
+from app.schemas.response import MsgResp
 from skip_common_lib.utils.errors import Errors as err
 from skip_common_lib.utils.notifier import Notifier as notify
 
 
 class FreelancerFinder:
-    logger = logging.getLogger("skip-crud-service")
+    logger = logging.getLogger("skip-freelancer-finder-service")
 
     @classmethod
     @middlwares.save_incoming_job
-    async def find(cls, incoming_job: job_model.Job):
+    async def find(cls, incoming_job: Job):
         """Find available and nearest freelancers to the job location
         (which is actually the customer location) using skip-db-lib.
 
         Args:
-            incoming_job (job_model.Job)
+            incoming_job (Job)
 
         Returns:
-            resp_schema.MsgResponse
+            MsgResp
         """
         try:
             cls.logger.debug(
@@ -39,8 +35,7 @@ class FreelancerFinder:
         except Exception as e:
             return err.general_exception(e)
 
-        return resp_schema.MsgResponse(
-            args=incoming_job.dict(exclude_none=True),
+        return MsgResp(
             msg=f"notification pushed to freelancers {notified_tokens}",
         )
 
@@ -68,7 +63,7 @@ class FreelancerFinder:
         try:
             # get the job
             job = await jobs_db.get_job_by_id(job_id)
-            job = job_model.Job(**job)
+            job = Job(**job)
 
             # get the customer posted the job
             customer = await customers_db.get_customer_by_email(job.customer_email)
