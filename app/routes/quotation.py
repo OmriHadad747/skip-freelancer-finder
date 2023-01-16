@@ -11,6 +11,6 @@ async def post_quotation(job_id: str, job: JobQuotation):
     return await JobQuotation.quote(job_id, job)
 
 
-@api.post("/quotation/{job_id}/confirm")
+@api.post("/quotation/{job_id}/confirmation")
 async def confirm_quotation(job_id: str, confirmation: bool):
     return await JobQuotation.confirm(job_id, confirmation)
