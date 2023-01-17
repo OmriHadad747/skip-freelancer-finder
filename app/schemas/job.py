@@ -40,12 +40,12 @@ class JobQuotation(CustomBaseModel):
 class Job(CustomBaseModel):
     created_at: datetime = pyd.Field(default_factory=datetime.now)
     id: str = pyd.Field(alias="_id", default_factory=ObjectId)
-    job_category: JobCategoryEnum
-    job_status: JobStatusEnum = JobStatusEnum.FREELANCER_FINDING.value
-    job_description: str
-    job_location: pyd.conlist(item_type=float, min_items=2, max_items=2)
-    job_quotation: JobQuotation = None
-    job_price: str = None
+    category: JobCategoryEnum
+    status: JobStatusEnum = JobStatusEnum.FREELANCER_FINDING.value
+    description: str
+    location: list[float] = pyd.Field(min_items=2, max_items=2)
+    quotation: JobQuotation = None
+    price: str = None
     customer_email: str
     customer_phone: str
     customer_address: str
@@ -92,8 +92,8 @@ class Job(CustomBaseModel):
 
 
 class JobUpdate(CustomBaseModel):
-    job_status: JobStatusEnum = None
-    job_quotation: JobQuotation = None
-    job_price: str = None
+    status: JobStatusEnum = None
+    quotation: JobQuotation = None
+    price: str = None
     freelancer_email: str = None
     freelancer_phone: str = None

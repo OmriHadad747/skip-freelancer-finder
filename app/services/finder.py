@@ -1,14 +1,13 @@
 import logging
 import pydantic as pyd
 
-from app.schemas.job import Job, JobUpdate, JobStatusEnum
+from app.schemas.job import Job, JobStatusEnum
 from app.schemas.customer import Customer
 from app.schemas.freelancer import Freelancer
 from app.schemas.response import MsgResp
+from app.notifier import Notifier as notify
 from app.settings import app_settings as s
 
-from skip_common_lib.middleware import job_quotation as middleware
-from skip_common_lib.utils.notifier import Notifier as notify
 from skip_common_lib.utils.async_http import AsyncHttp
 from skip_common_lib.consts import HttpMethod
 
@@ -16,28 +15,63 @@ from skip_common_lib.consts import HttpMethod
 class FreelancerFinder:
     logger = logging.getLogger("skip-freelancer-finder-service")
 
+    @staticmethod
+    async def _get_nearest_available_freelancers(job: Job) -> list:
+        response = await AsyncHttp.http_call(
+            method=HttpMethod.POST,
+            url=f"{s.setting.crud_url}/freelancer/nearest",
+            json=dict(
+                job_location=job.location,
+                job_customer_county=job.customer_county,
+                job_category=job.category,
+            ),
+        )
+
+        return response.json().get("output")
+
+    @staticmethod
+    async def _update_and_get_job(
+        job_id: str, freelancer_email: str, freelancer_phone: str
+    ) -> Job:
+        response = await AsyncHttp.http_call(
+            method=HttpMethod.PATCH,
+            url=f"{s.setting.crud_url}/job/{job_id}",
+            params=dict(
+                current_job_status=JobStatusEnum.FREELANCER_FINDING, return_with_updated=True
+            ),
+            json=dict(
+                freelancer_email=freelancer_email,
+                freelancer_phone=freelancer_phone,
+                job_status=JobStatusEnum.FREELANCER_FOUND,
+            ),
+        )
+
+        return Job(**response.json().get("entity"))
+
+    @staticmethod
+    async def _get_customer(customer_email: str) -> Customer:
+        # get the customer who published the job
+        response = await AsyncHttp.http_call(
+            method=HttpMethod.GET,
+            url=f"{s.setting.crud_url}/customer/{customer_email}",
+        )
+
+        return Customer(**response.json().get("output"))
+
     @classmethod
-    async def find(cls, incoming_job: Job):
+    async def find(cls, job: Job):
         """Find available and nearest freelancers to the job location
-        (which is actually the customer location) using skip-db-lib.
+        (which is actually the customer location).
 
         Args:
-            incoming_job (Job)
+            job (Job)
 
         Returns:
             MsgResp
         """
-        try:
-            cls.logger.debug(
-                f"searching neareast freelancers to customer location | lon: {incoming_job.job_location[0]} | lat: {incoming_job.job_location[1]}"
-            )
+        available_freelancers = await FreelancerFinder._get_nearest_available_freelancers(job)
 
-            # available_freelancers = await freelancers_db.find_nearest_freelancers(incoming_job)
-            # TODO make the next call async
-            # notified_tokens = notify.push_incoming_job(incoming_job, available_freelancers)
-
-        except Exception as e:
-            return err.general_exception(e)
+        notified_tokens = notify.push_incoming_job(job, available_freelancers)
 
         return MsgResp(
             msg=f"notification pushed to freelancers {notified_tokens}",
@@ -45,46 +79,23 @@ class FreelancerFinder:
 
     @classmethod
     @pyd.validate_arguments
-    async def take(cls, job_id: str, freelancer: Freelancer):
-        """In case the given 'job_id' equals None, you can assume that the job already
-        taken by another freelancer.
-
-        Otherwise, fetch the job and corresponded customer from the database
-        using the given 'job_id'.
-        Eventually, notifies the customer that a freelancer was found.
+    async def take(cls, job_id: str, freelancer: Freelancer) -> MsgResp:
+        """Attache a freelancer to a job.
 
         Args:
-            job_id (str, optional): An id of a job. Defaults to None.
+            job_id (str): Job ID.
+            freelancer (Freelancer): Freelancer that takes the job.
 
         Returns:
-            resp_schema.MsgResponse
+            MsgResp
         """
-        # update quotation in job
-        response = await AsyncHttp.http_call(
-            method=HttpMethod.PATCH,
-            url=f"{s.setting.crud_url}/job/{job_id}",
-            params=dict(current_job_status=JobStatusEnum.FREELANCER_FINDING, return_with_updated=True),
-            json=JobUpdate(
-                freelancer_email=freelancer.email,
-                freelancer_phone=freelancer.phone,
-                job_status=JobStatusEnum.FREELANCER_FOUND
-
-            ).dict(),
+        job = await FreelancerFinder._update_and_get_job(
+            job_id, freelancer.email, freelancer.phone
         )
 
-        job = Job(**response.json().get("entity"))
-
-        # get the customer who published the job
-        response = await AsyncHttp.http_call(
-            method=HttpMethod.GET,
-            url=f"{s.setting.crud_url}/customer/{job.customer_email}",
-        )
-
-        customer = Customer(**response.json().get("output"))
+        customer = await FreelancerFinder._get_customer(job.customer_email)
 
         # TODO make async
         notify.push_freelancer_found(job, customer)
 
-        return MsgResp(
-            msg=f"notification pushed to customer {customer.email}"
-        )
+        return MsgResp(msg=f"notification pushed to customer {customer.email}")

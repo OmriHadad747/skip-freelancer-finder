@@ -29,7 +29,9 @@ class Freelancer(CustomBaseModel):
     county: str
     tmp_county: str = None
     tmp_county_date: datetime = None
-    categories: pyd.conlist(item_type=FreelancerCategoryEnum)
+    categories: list[FreelancerCategoryEnum] = pyd.Field(
+        min_items=1, max_items=len(FreelancerCategoryEnum)
+    )
     current_status: FreelancerStatusEnum = FreelancerStatusEnum.AVAILABLE.value
     rating: float = 1.0
     job_history: List[Job] = []
@@ -46,7 +48,9 @@ class FreelancerUpdate(CustomBaseModel):
     county: str = None
     tmp_county: str = None
     tmp_county_date: datetime = None
-    categories: list[FreelancerCategoryEnum] = None
+    categories: list[FreelancerCategoryEnum] = pyd.Field(
+        min_items=1, max_items=len(FreelancerCategoryEnum), default=None
+    )
     current_status: FreelancerStatusEnum = None
     rating: float = None
     current_location: list[float] = pyd.Field(min_items=2, max_items=2, default=None)

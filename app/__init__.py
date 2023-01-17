@@ -20,7 +20,7 @@ def create_app(settings: pyd.BaseSettings) -> FastAPI:
     # init routes
     from app.routes import finder, quotation
 
-    app.include_router(finder.api)
-    app.include_router(quotation.api)
+    app.include_router(finder.api, tags=["Finder"])
+    app.include_router(quotation.api, tags=["Quotation"])
 
     return app
