@@ -64,10 +64,10 @@ class Job(CustomBaseModel):
     ) -> Dict[str, Any]:
         job_data = {
             "job_id": str(self.id),
-            "job_category": str(self.job_category),
-            "job_description": self.job_description,
-            "job_lon": str(self.job_location[0]),
-            "job_lat": str(self.job_location[1]),
+            "job_category": str(self.category),
+            "job_description": self.description,
+            "job_lon": str(self.location[0]),
+            "job_lat": str(self.location[1]),
         }
 
         if customer_part:

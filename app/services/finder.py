@@ -5,6 +5,7 @@ from app.schemas.job import Job, JobStatusEnum
 from app.schemas.customer import Customer
 from app.schemas.freelancer import Freelancer
 from app.schemas.response import MsgResp
+from app.schemas.crud_response import SkipEntity
 from app.notifier import Notifier as notify
 from app.settings import app_settings as s
 
@@ -13,27 +14,32 @@ from skip_common_lib.consts import HttpMethod
 
 
 class FreelancerFinder:
-    logger = logging.getLogger("skip-freelancer-finder-service")
+    logger = logging.getLogger("freelancer-finder-service")
 
-    @staticmethod
-    async def _get_nearest_available_freelancers(job: Job) -> list:
+    @classmethod
+    @pyd.validate_arguments
+    async def _get_nearest_available_freelancers(cls, job: Job) -> list[Freelancer]:
         response = await AsyncHttp.http_call(
+            logger=cls.logger,
             method=HttpMethod.POST,
             url=f"{s.setting.crud_url}/freelancer/nearest",
             json=dict(
                 job_location=job.location,
-                job_customer_county=job.customer_county,
+                customer_county=job.customer_county,
                 job_category=job.category,
             ),
         )
 
-        return response.json().get("output")
+        available_freelancers_list = SkipEntity(**response.json())
+        return available_freelancers_list.entity
 
-    @staticmethod
+    @classmethod
+    @pyd.validate_arguments
     async def _update_and_get_job(
-        job_id: str, freelancer_email: str, freelancer_phone: str
+        cls, job_id: str, freelancer_email: str, freelancer_phone: str
     ) -> Job:
         response = await AsyncHttp.http_call(
+            logger=cls.logger,
             method=HttpMethod.PATCH,
             url=f"{s.setting.crud_url}/job/{job_id}",
             params=dict(
@@ -46,19 +52,24 @@ class FreelancerFinder:
             ),
         )
 
-        return Job(**response.json().get("entity"))
+        job_entity = SkipEntity(**response.json())
+        return job_entity.entity
 
-    @staticmethod
-    async def _get_customer(customer_email: str) -> Customer:
+    @classmethod
+    @pyd.validate_arguments
+    async def _get_customer(cls, customer_email: str) -> Customer:
         # get the customer who published the job
         response = await AsyncHttp.http_call(
+            logger=cls.logger,
             method=HttpMethod.GET,
             url=f"{s.setting.crud_url}/customer/{customer_email}",
         )
 
-        return Customer(**response.json().get("output"))
+        customer_entity = SkipEntity(**response.json())
+        return customer_entity.entity
 
     @classmethod
+    @pyd.validate_arguments
     async def find(cls, job: Job):
         """Find available and nearest freelancers to the job location
         (which is actually the customer location).
@@ -69,6 +80,8 @@ class FreelancerFinder:
         Returns:
             MsgResp
         """
+        cls.logger.info(f"finding freelancer for job {job.id}.")
+
         available_freelancers = await FreelancerFinder._get_nearest_available_freelancers(job)
 
         notified_tokens = notify.push_incoming_job(job, available_freelancers)
@@ -89,9 +102,7 @@ class FreelancerFinder:
         Returns:
             MsgResp
         """
-        job = await FreelancerFinder._update_and_get_job(
-            job_id, freelancer.email, freelancer.phone
-        )
+        job = await FreelancerFinder._update_and_get_job(job_id, freelancer.email, freelancer.phone)
 
         customer = await FreelancerFinder._get_customer(job.customer_email)
 

@@ -39,14 +39,14 @@ class Notifier:
 
         Args:
             job (Job): A job to notify freelancers about.
-            freelancers (list[Freelancer]): Cursor of available freelancers
+            freelancers (list[Freelancer]): List of available freelancers.
 
         Returns:
-            list[str]: list of all the registration tokens that actually notified
+            list[str]: list of all the registration tokens that actually notified.
         """
         # app.logger.info("notifying freelancers about incoming job")
 
-        tokens = [f.get("registration_token") for f in freelancers]
+        tokens = [f.registration_token for f in freelancers]
 
         msg = messaging.MulticastMessage(data=job.job_to_str(), tokens=tokens)
         resp: messaging.BatchResponse = messaging.send_multicast(msg, dry_run=True)
