@@ -59,5 +59,5 @@ class FreelancerUpdate(CustomBaseModel):
 
 
 class FreelancerTakeJob(CustomBaseModel):
-    freelancer_email: str
-    freelancer_phone: str
+    email: str
+    phone: str

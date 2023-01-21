@@ -2,10 +2,11 @@ import logging
 from typing import Any
 import pydantic as pyd
 
-from app.schemas.job import Job, JobQuotation, JobUpdate, JobStatusEnum
+from app.schemas.job import Job, JobQuotation, JobStatusEnum
 from app.schemas.customer import Customer
 from app.schemas.freelancer import Freelancer
 from app.schemas.response import MsgResp
+from app.schemas.crud_response import SkipEntity
 from app.notifier import Notifier as notify
 from app.settings import app_settings as s
 
@@ -14,7 +15,7 @@ from skip_common_lib.consts import HttpMethod
 
 
 class JobQuot:
-    logger = logging.getLogger("skip-freelancer-finder-service")
+    logger = logging.getLogger("freelancer-finder-service")
 
     @staticmethod
     async def _update_and_get_job(job_id: str, to_update: dict[str, Any]) -> Job:
@@ -23,12 +24,13 @@ class JobQuot:
             method=HttpMethod.PATCH,
             url=f"{s.setting.crud_url}/job/{job_id}",
             params=dict(
-                current_job_status=JobStatusEnum.FREELANCER_FOUND, return_with_updated=True
+                current_job_status=JobStatusEnum.FREELANCER_FOUND.value, return_with_updated=True
             ),
             json=to_update,
         )
 
-        return Job(**response.json().get("entity"))
+        job_entity = SkipEntity(**response.json())
+        return job_entity.entity
 
     @staticmethod
     async def _get_customer(customer_email: str) -> Customer:
@@ -38,22 +40,24 @@ class JobQuot:
             url=f"{s.setting.crud_url}/customer/{customer_email}",
         )
 
-        return Customer(**response.json().get("output"))
+        customer_entity = SkipEntity(**response.json())
+        return customer_entity.entity
 
     @staticmethod
     async def _get_freelancer(freelancer_email: str) -> Freelancer:
         # get the freelancer who quoted the job
         response = await AsyncHttp.http_call(
             method=HttpMethod.GET,
-            url=f"{s.setting.crud_url}/freelacner/{freelancer_email}",
+            url=f"{s.setting.crud_url}/freelancer/{freelancer_email}",
         )
 
-        return Freelancer(**response.json().get("output"))
+        freelancer_entity = SkipEntity(**response.json())
+        return freelancer_entity.entity
 
     @classmethod
     @pyd.validate_arguments
     async def quote(cls, job_id: str, quotation: JobQuotation):
-        job = await JobQuot._update_and_get_job(job_id, to_update=dict(job_quotation=quotation))
+        job = await JobQuot._update_and_get_job(job_id, to_update=dict(quotation=quotation.dict()))
 
         customer = await JobQuot._get_customer(job.customer_email)
 
@@ -67,9 +71,9 @@ class JobQuot:
         job = await JobQuot._update_and_get_job(
             job_id,
             to_update=dict(
-                job_status=JobStatusEnum.APPROVED
+                status=JobStatusEnum.APPROVED.value
                 if confirmation
-                else JobStatusEnum.CUSTOMER_CANCELD
+                else JobStatusEnum.CUSTOMER_CANCELD.value
             ),
         )
 

@@ -104,7 +104,7 @@ class Notifier:
 
         msg = messaging.Message(
             data=job.job_to_str(freelancer_part=True),
-            tokens=freelancer.registration_token,
+            token=freelancer.registration_token,
         )
         # resp = messaging.send(msg, dry_run=True)
 

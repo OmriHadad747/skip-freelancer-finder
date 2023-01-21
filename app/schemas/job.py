@@ -15,25 +15,25 @@ class JobCategoryEnum(Enum):
 
 
 class JobStatusEnum(Enum):
-    FREELANCER_FINDING = "freelancer finding"
-    FREELANCER_FOUND = "freelancer found"
-    FREELANCER_CANCELED = "freelancer canceled"
-    CUSTOMER_CANCELD = "customer canceld"
-    APPROVED = "customer approved"
-    IN_PROGRESS = "in progress"
+    FREELANCER_FINDING = "freelancer-finding"
+    FREELANCER_FOUND = "freelancer-found"
+    FREELANCER_CANCELED = "freelancer-canceled"
+    CUSTOMER_CANCELD = "customer-canceld"
+    APPROVED = "customer-approved"
+    IN_PROGRESS = "in-progress"
     DONE = "done"
 
 
 class JobQuotation(CustomBaseModel):
-    quotation_discription: str
+    description: str
     estimated_job_duration: str
-    quotation: str
+    price: str
 
     def quotation_to_str(self) -> Dict[str, Any]:
         return {
-            "quotation_description": self.quotation_discription,
+            "description": self.description,
             "estimated_job_duration": self.estimated_job_duration,
-            "quotation": self.quotation,
+            "price": self.price,
         }
 
 

@@ -1,9 +1,11 @@
 import logging
 import pydantic as pyd
 
+from typing import Any
+
 from app.schemas.job import Job, JobStatusEnum
 from app.schemas.customer import Customer
-from app.schemas.freelancer import Freelancer
+from app.schemas.freelancer import Freelancer, FreelancerTakeJob
 from app.schemas.response import MsgResp
 from app.schemas.crud_response import SkipEntity
 from app.notifier import Notifier as notify
@@ -36,20 +38,16 @@ class FreelancerFinder:
     @classmethod
     @pyd.validate_arguments
     async def _update_and_get_job(
-        cls, job_id: str, freelancer_email: str, freelancer_phone: str
+        cls, job_id: str, to_update: dict[str, Any]
     ) -> Job:
         response = await AsyncHttp.http_call(
             logger=cls.logger,
             method=HttpMethod.PATCH,
             url=f"{s.setting.crud_url}/job/{job_id}",
             params=dict(
-                current_job_status=JobStatusEnum.FREELANCER_FINDING, return_with_updated=True
+                current_job_status=JobStatusEnum.FREELANCER_FINDING.value, return_with_updated=True
             ),
-            json=dict(
-                freelancer_email=freelancer_email,
-                freelancer_phone=freelancer_phone,
-                job_status=JobStatusEnum.FREELANCER_FOUND,
-            ),
+            json=to_update,
         )
 
         job_entity = SkipEntity(**response.json())
@@ -92,17 +90,26 @@ class FreelancerFinder:
 
     @classmethod
     @pyd.validate_arguments
-    async def take(cls, job_id: str, freelancer: Freelancer) -> MsgResp:
+    async def take(cls, job_id: str, freelancer: FreelancerTakeJob) -> MsgResp:
         """Attache a freelancer to a job.
 
         Args:
             job_id (str): Job ID.
-            freelancer (Freelancer): Freelancer that takes the job.
+            freelancer (FreelancerTakeJob): Freelancer that takes the job.
 
         Returns:
             MsgResp
         """
-        job = await FreelancerFinder._update_and_get_job(job_id, freelancer.email, freelancer.phone)
+        cls.logger.info(f"freelancer {freelancer.email} takes job {job_id}")
+
+        job = await FreelancerFinder._update_and_get_job(
+            job_id,
+            to_update=dict(
+                freelancer_email=freelancer.email,
+                freelancer_phone=freelancer.phone,
+                status=JobStatusEnum.FREELANCER_FOUND.value,
+            ),
+        )
 
         customer = await FreelancerFinder._get_customer(job.customer_email)
 

@@ -11,5 +11,3 @@ class AvailableFreelancers(CustomBaseModel):
 class SkipEntity(CustomBaseModel):
     entity: Job | Freelancer | list[Freelancer] | Customer
     msg: str | None
-
-    
