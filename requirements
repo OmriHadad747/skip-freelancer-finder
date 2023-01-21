@@ -4,4 +4,4 @@ uvicorn[standard]==0.20.0
 black==22.8.0
 pytest-mock==3.8.2
 python-dotenv==0.21.0
--e git+https://github.com/OmriHadad747/skip-common-lib.git@move-to-fast-api#egg=skip-common-lib
+-e git+https://github.com/OmriHadad747/skip-common-lib.git@dev#egg=skip-common-lib
