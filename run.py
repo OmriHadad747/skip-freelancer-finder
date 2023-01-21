@@ -1,7 +1,11 @@
+import uvicorn
+
 from app import create_app
-from skip_common_lib import config
+from app import settings
+
+
+app = create_app(settings.DevelopmentSettings)
 
 
 if __name__ == "__main__":
-    app = create_app(config.DevConfig)
-    app.run(host="0.0.0.0", port=4999)
+    uvicorn.run(app="run:app", host="localhost", port=8001, reload=True)

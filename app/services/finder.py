@@ -1,84 +1,112 @@
-import flask
+import logging
 import pydantic as pyd
 
-from typing import List, Tuple
-from pymongo import command_cursor
-from flask import jsonify
-from flask import current_app as app
-from firebase_admin import messaging
+from app.schemas.job import Job, JobStatusEnum
+from app.schemas.customer import Customer
+from app.schemas.freelancer import Freelancer
+from app.schemas.response import MsgResp
+from app.schemas.crud_response import SkipEntity
+from app.notifier import Notifier as notify
+from app.settings import app_settings as s
 
-from skip_common_lib.middleware import freelancer_finder as middlwares
-from skip_common_lib.models import job as job_model
-from skip_common_lib.models import customer as customer_model
-from skip_common_lib.database.jobs import JobDatabase as jobs_db
-from skip_common_lib.database.customers import CustomerDatabase as customers_db
-from skip_common_lib.database.freelancers import FreelancerDatabase as freelancers_db
-from skip_common_lib.utils.errors import Errors as err
-from skip_common_lib.utils.notifier import Notifier as notify
+from skip_common_lib.utils.async_http import AsyncHttp
+from skip_common_lib.consts import HttpMethod
 
 
 class FreelancerFinder:
+    logger = logging.getLogger("freelancer-finder-service")
+
     @classmethod
-    @middlwares.save_incoming_job
-    def find(cls, incoming_job: job_model.Job) -> Tuple[flask.Response, int]:
+    @pyd.validate_arguments
+    async def _get_nearest_available_freelancers(cls, job: Job) -> list[Freelancer]:
+        response = await AsyncHttp.http_call(
+            logger=cls.logger,
+            method=HttpMethod.POST,
+            url=f"{s.setting.crud_url}/freelancer/nearest",
+            json=dict(
+                job_location=job.location,
+                customer_county=job.customer_county,
+                job_category=job.category,
+            ),
+        )
+
+        available_freelancers_list = SkipEntity(**response.json())
+        return available_freelancers_list.entity
+
+    @classmethod
+    @pyd.validate_arguments
+    async def _update_and_get_job(
+        cls, job_id: str, freelancer_email: str, freelancer_phone: str
+    ) -> Job:
+        response = await AsyncHttp.http_call(
+            logger=cls.logger,
+            method=HttpMethod.PATCH,
+            url=f"{s.setting.crud_url}/job/{job_id}",
+            params=dict(
+                current_job_status=JobStatusEnum.FREELANCER_FINDING, return_with_updated=True
+            ),
+            json=dict(
+                freelancer_email=freelancer_email,
+                freelancer_phone=freelancer_phone,
+                job_status=JobStatusEnum.FREELANCER_FOUND,
+            ),
+        )
+
+        job_entity = SkipEntity(**response.json())
+        return job_entity.entity
+
+    @classmethod
+    @pyd.validate_arguments
+    async def _get_customer(cls, customer_email: str) -> Customer:
+        # get the customer who published the job
+        response = await AsyncHttp.http_call(
+            logger=cls.logger,
+            method=HttpMethod.GET,
+            url=f"{s.setting.crud_url}/customer/{customer_email}",
+        )
+
+        customer_entity = SkipEntity(**response.json())
+        return customer_entity.entity
+
+    @classmethod
+    @pyd.validate_arguments
+    async def find(cls, job: Job):
         """Find available and nearest freelancers to the job location
-        (which is actually the customer location) using skip-db-lib.
+        (which is actually the customer location).
 
         Args:
-            incoming_job (job_model.Job)
+            job (Job)
 
         Returns:
-            Tuple[flask.Response, int]
+            MsgResp
         """
-        try:
-            app.logger.debug(
-                f"searching neareast freelancers to customer location | lon: {incoming_job.job_location[0]} | lat: {incoming_job.job_location[1]}"
-            )
+        cls.logger.info(f"finding freelancer for job {job.id}.")
 
-            available_freelancers = freelancers_db.find_nearest_freelancers(incoming_job)
-            notified_tokens = notify.push_incoming_job(incoming_job, available_freelancers)
+        available_freelancers = await FreelancerFinder._get_nearest_available_freelancers(job)
 
-        except Exception as e:
-            return err.general_exception(e)
+        notified_tokens = notify.push_incoming_job(job, available_freelancers)
 
-        return (
-            jsonify(message=f"notification pushed to freelancers {notified_tokens}"),
-            200,
+        return MsgResp(
+            msg=f"notification pushed to freelancers {notified_tokens}",
         )
 
     @classmethod
-    @middlwares.update_incoming_job
-    def take(cls, job_id: str = None) -> Tuple[flask.Response, int]:
-        """In case the given 'job_id' equals None, you can assume that the job already
-        taken by another freelancer.
-
-        Otherwise, fetch the job and corresponded customer from the database
-        using the given 'job_id'.
-        Eventually, notifies the customer that a freelancer was found.
+    @pyd.validate_arguments
+    async def take(cls, job_id: str, freelancer: Freelancer) -> MsgResp:
+        """Attache a freelancer to a job.
 
         Args:
-            job_id (str, optional): An id of a job. Defaults to None.
+            job_id (str): Job ID.
+            freelancer (Freelancer): Freelancer that takes the job.
 
         Returns:
-            Tuple[flask.Response, int]
+            MsgResp
         """
-        if not job_id:
-            return jsonify(message="job was already taken by another freelancer"), 400
+        job = await FreelancerFinder._update_and_get_job(job_id, freelancer.email, freelancer.phone)
 
-        try:
-            # get the job
-            job = job_model.Job(**jobs_db.get_job_by_id(job_id))
+        customer = await FreelancerFinder._get_customer(job.customer_email)
 
-            # get the customer posted the job
-            customer = customer_model.Customer(
-                **customers_db.get_customer_by_email(job.customer_email)
-            )
+        # TODO make async
+        notify.push_freelancer_found(job, customer)
 
-            notify.push_freelancer_found(job, customer)
-
-        except pyd.ValidationError as e:
-            return err.validation_error(e)
-        except Exception as e:
-            return err.general_exception(e)
-
-        return jsonify(message=f"notification pushed to customer {customer.email}"), 200
+        return MsgResp(msg=f"notification pushed to customer {customer.email}")
